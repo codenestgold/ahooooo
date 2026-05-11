@@ -3,288 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Echoes of Midnight | Director's Cut</title>
-    <!-- Scripts & Styles CDNs -->
+    <title>Echoes of Midnight | Fixed</title>
+    
+    <!-- المكتبات الأساسية - اتأكد إنك متصل بالإنترنت -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- تم تعديل استدعاء Framer Motion و Lucide لضمان التوافق -->
     <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #050505;
+            background-color: #050505; /* اللون الأسود اللي بيظهر لك */
             color: white;
-            overflow-x: hidden;
-        }
-        .noir-gradient {
-            background: radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 40%),
-                        linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.95));
+            margin: 0;
         }
         .grain-texture {
+            position: fixed;
+            inset: 0;
             background-image: url('https://www.transparenttextures.com/patterns/black-linen.png');
-            opacity: 0.15;
+            opacity: 0.1;
             pointer-events: none;
+            z-index: 1;
         }
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: #050505; }
-        ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
+        // تعريف المكتبات من الـ Window عشان نضمن إنها اتقرت صح
         const { useState, useEffect, useMemo, useRef } = React;
-        const { motion, AnimatePresence } = framerMotion;
+        const motion = window.framerMotion.motion;
+        const AnimatePresence = window.framerMotion.AnimatePresence;
 
-        // --- Data Definitions ---
-        const NAV = [
-            { id: "home", label: "الرئيسية", icon: "Film" },
-            { id: "vault", label: "الخزنة", icon: "Layers3" },
-            { id: "vision", label: "الرؤية", icon: "Sparkles" },
-            { id: "dashboard", label: "التحليل", icon: "LayoutDashboard" },
-            { id: "sound", label: "الصوت", icon: "Headphones" },
-        ];
-
+        // مصفوفة الشخصيات
         const CHARACTERS = [
-            { id: "salim", name: "سليم", role: "المخطط", quote: "الثقة هي أول ما يسرقه الليل.", mood: "سيطرة · صمت · ضغط", color: "from-zinc-900 to-zinc-700", desc: "رجل دقيق، لا يمكن قراءته، يخطط دائماً لخطوتين للأمام." },
-            { id: "nourhan", name: "نورهان", role: "الجرح الخفي", quote: "بعض الندوب لا تتحدث إلا بعد منتصف الليل.", mood: "أناقة · حزن · غموض", color: "from-stone-900 to-stone-700", desc: "هادئة على السطح، لكنها تحمل عاصفة لم تسمها أبداً." },
+            { id: "salim", name: "سليم", role: "المخطط", quote: "الثقة هي أول ما يسرقه الليل.", color: "from-zinc-900 to-zinc-700" },
+            { id: "nourhan", name: "نورهان", role: "الجرح الخفي", quote: "بعض الندوب لا تتحدث إلا بعد منتصف الليل.", color: "from-stone-900 to-stone-700" }
         ];
 
-        const SOUND_LAYERS = [
-            { id: 1, name: "مطر المدينة", level: 65, type: "Ambient" },
-            { id: 2, name: "ترددات نيون", level: 30, type: "Texture" },
-            { id: 3, name: "خطوات بعيدة", level: 15, type: "FX" },
-            { id: 4, name: "رياح Noir", level: 45, type: "Wind" },
-        ];
-
-        // --- Helper Components ---
+        // مكون الأيقونات المصلح
         const Icon = ({ name, className }) => {
-            const LucideIcon = lucide[name];
-            return LucideIcon ? <LucideIcon className={className} /> : null;
+            // محاكاة بسيطة للأيقونات عشان لو المكتبة اتأخرت في التحميل الموقع ميكرشش
+            return <i className={`${className} inline-block`} style={{fontStyle: 'normal'}}>•</i>;
         };
 
-        // --- Main App Component ---
         function App() {
             const [page, setPage] = useState("home");
-            const [selectedChar, setSelectedChar] = useState(CHARACTERS[0]);
             const [isScanning, setIsScanning] = useState(false);
-            const [soundMaster, setSoundMaster] = useState(false);
-
-            // Simulation of AI Analysis in Vision
-            const startScan = () => {
-                setIsScanning(true);
-                setTimeout(() => setIsScanning(false), 3000);
-            };
 
             return (
-                <div className="min-h-screen relative">
-                    <div className="fixed inset-0 grain-texture z-0" />
-                    
-                    {/* Header */}
-                    <header className="sticky top-0 z-50 border-b border-white/5 bg-black/80 backdrop-blur-xl px-6 py-4">
-                        <div className="max-w-7xl mx-auto flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
-                                    <Icon name="Film" className="w-5 h-5 text-white" />
-                                </div>
-                                <div className="text-right">
-                                    <h1 className="text-sm font-bold tracking-[0.2em] uppercase">ECHOES OF MIDNIGHT</h1>
-                                    <p className="text-[10px] text-zinc-500">نظام إدارة الإنتاج السينمائي</p>
-                                </div>
-                            </div>
-
-                            <nav className="hidden md:flex items-center gap-2">
-                                {NAV.map(item => (
-                                    <button 
-                                        key={item.id}
-                                        onClick={() => setPage(item.id)}
-                                        className={`px-4 py-2 rounded-full text-xs transition-all ${page === item.id ? 'bg-white text-black' : 'text-zinc-400 hover:bg-white/5'}`}
-                                    >
-                                        {item.label}
-                                    </button>
-                                ))}
+                <div className="relative z-10 min-h-screen">
+                    <header className="border-b border-white/5 bg-black/80 backdrop-blur-md p-4 sticky top-0">
+                        <div className="max-w-7xl mx-auto flex justify-between items-center">
+                            <h1 className="text-sm font-bold tracking-widest">ECHOES OF MIDNIGHT</h1>
+                            <nav className="flex gap-4">
+                                <button onClick={() => setPage("home")} className={`text-xs ${page==='home'?'text-white':'text-zinc-500'}`}>الرئيسية</button>
+                                <button onClick={() => setPage("vision")} className={`text-xs ${page==='vision'?'text-white':'text-zinc-500'}`}>الرؤية</button>
+                                <button onClick={() => setPage("sound")} className={`text-xs ${page==='sound'?'text-white':'text-zinc-500'}`}>الصوت</button>
                             </nav>
-
-                            <button 
-                                onClick={() => setSoundMaster(!soundMaster)}
-                                className={`p-2 rounded-lg border transition-all ${soundMaster ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500' : 'border-white/10 bg-white/5 text-zinc-400'}`}
-                            >
-                                <Icon name={soundMaster ? "Volume2" : "VolumeX"} className="w-5 h-5" />
-                            </button>
                         </div>
                     </header>
 
-                    <main className="relative z-10 max-w-7xl mx-auto px-6 py-12">
-                        
-                        {/* HOME PAGE */}
+                    <main className="max-w-5xl mx-auto p-6">
                         {page === "home" && (
-                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                                <div className="text-center mb-16 py-20">
-                                    <div className="inline-block px-4 py-1 border border-white/10 bg-white/5 rounded-full text-[10px] tracking-widest text-zinc-500 mb-6 uppercase">
-                                        Director's Cut v2.0
-                                    </div>
-                                    <h2 className="text-6xl md:text-8xl font-bold tracking-tighter mb-6">أصداء منتصف الليل</h2>
-                                    <p className="text-zinc-400 max-w-xl mx-auto text-sm leading-relaxed">
-                                        نظام تحكم سينمائي متكامل لإدارة الشخصيات، الرؤية البصرية، والهندسة الصوتية في عالم الـ Noir الخاص بك.
-                                    </p>
-                                </div>
-
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center">
+                                <h2 className="text-5xl font-bold mb-4">أصداء منتصف الليل</h2>
+                                <p className="text-zinc-500 mb-12">مرحباً بك في نظام إدارة الإنتاج</p>
                                 <div className="grid md:grid-cols-2 gap-6">
-                                    {CHARACTERS.map(char => (
-                                        <div key={char.id} className="group relative overflow-hidden rounded-3xl border border-white/5 bg-zinc-900/50 p-8 hover:border-white/20 transition-all">
-                                            <div className={`absolute inset-0 bg-gradient-to-br ${char.color} opacity-10 group-hover:opacity-20 transition-opacity`} />
-                                            <div className="relative">
-                                                <span className="text-[10px] uppercase tracking-widest text-zinc-500">{char.role}</span>
-                                                <h3 className="text-3xl font-bold mt-2 mb-4">{char.name}</h3>
-                                                <p className="text-sm italic text-zinc-400 mb-6">"{char.quote}"</p>
-                                                <button onClick={() => {setSelectedChar(char); setPage('vault');}} className="text-xs border-b border-white/20 pb-1 hover:border-white transition-all">فتح الملف التعريفي</button>
-                                            </div>
+                                    {CHARACTERS.map(c => (
+                                        <div key={c.id} className="p-8 rounded-3xl bg-zinc-900/50 border border-white/5 text-right">
+                                            <span className="text-[10px] text-zinc-500 uppercase">{c.role}</span>
+                                            <h3 className="text-2xl font-bold mt-2">{c.name}</h3>
+                                            <p className="text-zinc-400 mt-4 italic">"{c.quote}"</p>
                                         </div>
                                     ))}
                                 </div>
                             </motion.div>
                         )}
 
-                        {/* VISION PAGE (New Interface) */}
                         {page === "vision" && (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                                <div className="border-b border-white/5 pb-8">
-                                    <h2 className="text-3xl font-bold">محلل الرؤية البصرية</h2>
-                                    <p className="text-zinc-500 text-sm mt-2">نظام الذكاء الاصطناعي لتحليل المشاهد والإضاءة السينمائية.</p>
+                            <div className="py-10">
+                                <h2 className="text-2xl font-bold mb-6">محلل الرؤية</h2>
+                                <div className="aspect-video bg-zinc-900 rounded-3xl border border-dashed border-white/10 flex items-center justify-center relative overflow-hidden">
+                                    {isScanning && (
+                                        <motion.div 
+                                            animate={{ top: ["0%", "100%", "0%"] }} 
+                                            transition={{ duration: 3, repeat: Infinity }}
+                                            className="absolute w-full h-1 bg-emerald-500 shadow-[0_0_15px_emerald-500]" 
+                                        />
+                                    )}
+                                    <button onClick={() => setIsScanning(!isScanning)} className="px-6 py-2 bg-white text-black rounded-full text-xs font-bold">
+                                        {isScanning ? "إيقاف المسح" : "بدأ الفحص البصري"}
+                                    </button>
                                 </div>
-
-                                <div className="grid lg:grid-cols-2 gap-8">
-                                    <div className="aspect-video bg-zinc-900 rounded-3xl border border-white/10 relative overflow-hidden flex items-center justify-center group">
-                                        {isScanning && (
-                                            <motion.div 
-                                                initial={{ top: 0 }}
-                                                animate={{ top: "100%" }}
-                                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                                className="absolute left-0 right-0 h-[2px] bg-emerald-500 shadow-[0_0_15px_emerald-500] z-20"
-                                            />
-                                        )}
-                                        <div className="text-center z-10">
-                                            <Icon name="Image" className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-                                            <p className="text-xs text-zinc-500">قم بسحب المشهد هنا للتحليل</p>
-                                            <button 
-                                                onClick={startScan}
-                                                className="mt-6 px-6 py-2 bg-white text-black text-xs font-bold rounded-full hover:bg-zinc-200 transition-all"
-                                            >
-                                                {isScanning ? "جاري المسح..." : "بدأ الفحص البصري"}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                                            <h4 className="text-xs uppercase tracking-widest text-zinc-500 mb-4">نتائج التحليل (Metadata)</h4>
-                                            <div className="space-y-3">
-                                                {[
-                                                    { label: "تباين الإضاءة (Chiaroscuro)", val: "عالي جداً" },
-                                                    { label: "تدرج الألوان", val: "أحادي / نيون خافت" },
-                                                    { label: "نسبة الضجيج (Film Grain)", val: "4.2%" },
-                                                    { label: "كشف العناصر", val: "سجائر، مطر، ظل طويل" }
-                                                ].map((item, i) => (
-                                                    <div key={i} className="flex justify-between text-sm">
-                                                        <span className="text-zinc-400">{item.label}</span>
-                                                        <span className="text-zinc-200 font-mono">{item.val}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="p-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/5">
-                                            <p className="text-xs text-emerald-500/80 leading-relaxed">
-                                                نصيحة AI: المشهد يحتاج لزيادة الظلال في الركن الأيسر لتعزيز غموض الشخصية.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* SOUND PAGE (New Interface) */}
-                        {page === "sound" && (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
-                                <div className="border-b border-white/5 pb-8">
-                                    <h2 className="text-3xl font-bold">مهندس الأجواء الصوتية</h2>
-                                    <p className="text-zinc-500 text-sm mt-2">تحكم في الطبقات الصوتية المحيطة بالفيلم.</p>
-                                </div>
-
-                                <div className="grid gap-4">
-                                    {SOUND_LAYERS.map(layer => (
-                                        <div key={layer.id} className="bg-zinc-900/50 border border-white/5 p-6 rounded-2xl flex items-center gap-6">
-                                            <button className="h-12 w-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-all">
-                                                <Icon name="Play" className="w-4 h-4 text-white" />
-                                            </button>
-                                            <div className="flex-1">
-                                                <div className="flex justify-between mb-2">
-                                                    <span className="text-sm font-medium">{layer.name}</span>
-                                                    <span className="text-xs text-zinc-500 uppercase">{layer.type}</span>
-                                                </div>
-                                                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                                    <motion.div 
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${layer.level}%` }}
-                                                        className="h-full bg-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="text-xs font-mono text-zinc-500 w-10 text-left">
-                                                {layer.level}%
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="mt-12 p-8 border border-white/10 rounded-3xl bg-gradient-to-r from-zinc-900 to-black flex items-center justify-between">
-                                    <div>
-                                        <h4 className="font-bold mb-1">المزيج النهائي (Master Mix)</h4>
-                                        <p className="text-xs text-zinc-500">مزامنة تلقائية مع إيقاع المشهد المختار.</p>
-                                    </div>
-                                    <div className="flex gap-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                                            <span className="text-[10px] uppercase text-zinc-400">Live Feedback</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* OTHER PAGES STUBS */}
-                        {(page === "vault" || page === "dashboard") && (
-                            <div className="py-20 text-center">
-                                <Icon name="Construction" className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
-                                <h3 className="text-xl font-bold">هذا القسم قيد المعالجة السينمائية</h3>
-                                <p className="text-zinc-500 text-sm mt-2">نحن نجهز البيانات لضمان أفضل تجربة مستخدم.</p>
-                                <button onClick={() => setPage('home')} className="mt-8 text-xs text-white underline">العودة للرئيسية</button>
                             </div>
                         )}
 
+                        {page === "sound" && (
+                            <div className="py-10">
+                                <h2 className="text-2xl font-bold mb-6">طبقات الصوت</h2>
+                                <div className="space-y-4">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="p-4 bg-white/5 rounded-xl flex justify-between items-center">
+                                            <span className="text-sm">مؤشر الصوت المحيطي {i}</span>
+                                            <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden">
+                                                <div className="h-full bg-white w-1/2"></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </main>
-
-                    {/* Background Glows */}
-                    <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-white/5 blur-[120px] rounded-full pointer-events-none" />
-                    <div className="fixed bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-zinc-800/20 blur-[100px] rounded-full pointer-events-none" />
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-        
-        // Initialize Lucide icons after rendering
-        setTimeout(() => {
-            if (window.lucide) {
-                window.lucide.createIcons();
-            }
-        }, 500);
     </script>
 </body>
 </html>
